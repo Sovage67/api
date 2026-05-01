@@ -1,8 +1,9 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-declare module 'fastify' {
-  interface FastifyRequest {
-    user?: {
+// Augmenter @fastify/jwt pour que request.user soit bien typé partout
+declare module '@fastify/jwt' {
+  interface FastifyJWT {
+    user: {
       id: string;
       username: string;
       accessToken: string;
@@ -15,12 +16,7 @@ declare module 'fastify' {
  */
 export async function requireAuth(request: FastifyRequest, reply: FastifyReply) {
   try {
-    const decoded = await request.jwtVerify<{
-      id: string;
-      username: string;
-      accessToken: string;
-    }>({ onlyCookie: true });
-    request.user = decoded;
+    await request.jwtVerify({ onlyCookie: true });
   } catch {
     reply.status(401).send({ error: 'Unauthorized', message: 'Connexion requise' });
   }

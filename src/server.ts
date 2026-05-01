@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import Fastify from 'fastify';
+import Fastify, { type FastifyError } from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
@@ -53,7 +53,7 @@ async function bootstrap() {
   await app.register(stripeRoutes, { prefix: '/api/stripe' });
 
   // Gestion d'erreur globale
-  app.setErrorHandler((error, _request, reply) => {
+  app.setErrorHandler((error: FastifyError, _request, reply) => {
     app.log.error(error);
     const statusCode = error.statusCode ?? 500;
     reply.status(statusCode).send({
