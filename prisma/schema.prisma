@@ -1,4 +1,4 @@
-﻿// Bot Intrepides - Prisma schema (canonical version)
+// Bot Intrepides - Prisma schema (canonical version)
 // Keep bot/prisma/schema.prisma and api/prisma/schema.prisma in sync.
 
 generator client {
@@ -56,8 +56,7 @@ model Guild {
   // DATABASE ID
   databaseIdAdminRole String?
 
-  // Modules (JSON map). Use {} as default to keep parser simple.
-  // Example: {"economy":true,"tickets":true,...}
+  // Modules (JSON map). Default empty - filled by app code.
   modules Json @default("{}")
 
   createdAt DateTime @default(now())
