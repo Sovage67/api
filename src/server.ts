@@ -46,6 +46,51 @@ async function bootstrap() {
     timestamp: new Date().toISOString(),
   }));
 
+  // Status public (bot, API, DB, Redis)
+  app.get('/api/status', async (_req, reply) => {
+    const results: Record<string, { ok: boolean; latencyMs?: number }> = {};
+
+    // API elle-même
+    results.api = { ok: true };
+
+    // Base de données
+    try {
+      const t0 = Date.now();
+      await prisma.$queryRaw`SELECT 1`;
+      results.database = { ok: true, latencyMs: Date.now() - t0 };
+    } catch {
+      results.database = { ok: false };
+    }
+
+    // Redis
+    try {
+      const t0 = Date.now();
+      await redis.ping();
+      results.redis = { ok: true, latencyMs: Date.now() - t0 };
+    } catch {
+      results.redis = { ok: false };
+    }
+
+    // Bot (via Discord API — vérifie si le bot répond)
+    try {
+      const t0 = Date.now();
+      const botToken = process.env.DISCORD_TOKEN ?? process.env.BOT_TOKEN;
+      const res = await fetch(`https://discord.com/api/v10/users/@me`, {
+        headers: { Authorization: `Bot ${botToken}` },
+      });
+      results.bot = { ok: res.ok, latencyMs: Date.now() - t0 };
+    } catch {
+      results.bot = { ok: false };
+    }
+
+    const allOk = Object.values(results).every((r) => r.ok);
+    return reply.status(allOk ? 200 : 207).send({
+      status: allOk ? 'operational' : 'degraded',
+      timestamp: new Date().toISOString(),
+      services: results,
+    });
+  });
+
   // Routes
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(userRoutes, { prefix: '/api/user' });

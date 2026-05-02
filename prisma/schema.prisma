@@ -1,6 +1,5 @@
-// Schéma Prisma local au repo "api".
-// IMPORTANT : ce fichier doit être identique à bot/prisma/schema.prisma.
-// Quand tu modifies le schéma, copie-le dans les deux repos puis fais une migration.
+﻿// Bot Intrepides - Prisma schema (canonical version)
+// Keep bot/prisma/schema.prisma and api/prisma/schema.prisma in sync.
 
 generator client {
   provider = "prisma-client-js"
@@ -19,18 +18,56 @@ model Guild {
   language       String    @default("fr")
   premium        Boolean   @default(false)
   premiumUntil   DateTime?
+
+  // Identite de la licence freemium
+  installerUserId String?
+  ownerUserId     String?
+  licenseHolderId String?
+  licenseFrozen   Boolean  @default(false)
+
+  // Welcome / Goodbye
   welcomeChannel String?
   welcomeMessage String?
   leaveChannel   String?
   leaveMessage   String?
-  logsChannel    String?
-  autoRole       String?
-  modules        Json      @default("{\"economy\":true,\"levels\":true,\"moderation\":true}")
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+
+  // Moderation / Logs
+  logsChannel String?
+  autoRole    String?
+
+  // Tickets
+  ticketCategory      String?
+  ticketSupportRole   String?
+  ticketOpenMessage   String?
+  ticketVoice         Boolean @default(false)
+  ticketVoiceCategory String?
+
+  // Bot personnalise
+  botNickname    String?
+  botDescription String?
+
+  // Translation
+  translationTarget String @default("fr")
+
+  // Stats / member logs
+  statsChannel      String?
+  memberLogsChannel String?
+
+  // DATABASE ID
+  databaseIdAdminRole String?
+
+  // Modules (JSON map). Use {} as default to keep parser simple.
+  // Example: {"economy":true,"tickets":true,...}
+  modules Json @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   members Member[]
   warns   Warn[]
+
+  @@index([installerUserId])
+  @@index([licenseHolderId])
 }
 
 model User {
@@ -77,6 +114,18 @@ model Warn {
   @@index([guildId, userId])
 }
 
+model MemberLog {
+  id        Int      @id @default(autoincrement())
+  guildId   String
+  userId    String
+  username  String
+  type      String
+  createdAt DateTime @default(now())
+
+  @@index([guildId, userId])
+  @@index([userId, createdAt])
+}
+
 model Subscription {
   id        String   @id @default(cuid())
   userId    String
@@ -100,4 +149,27 @@ model Session {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model DashboardSession {
+  id        String   @id @default(cuid())
+  userId    String
+  guildId   String?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([ip, createdAt])
+  @@index([guildId])
+}
+
+model GuildRiskScore {
+  guildId    String   @id
+  score      Int      @default(0)
+  reasons    Json     @default("[]")
+  flagged    Boolean  @default(false)
+  computedAt DateTime @default(now())
+
+  @@index([flagged, score])
 }

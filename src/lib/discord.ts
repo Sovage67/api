@@ -67,3 +67,57 @@ export async function getCurrentUserGuilds(accessToken: string): Promise<Discord
 export function hasAdminPermission(permissions: string): boolean {
   return (BigInt(permissions) & 0x8n) === 0x8n;
 }
+
+// ── Helpers bot token (pour récupérer salons/rôles) ──────────────────────────
+
+export interface DiscordChannel {
+  id: string;
+  name: string;
+  type: number; // 0=text, 2=voice, 4=category, 5=news, 13=stage, 15=forum
+  position: number;
+  parent_id: string | null;
+}
+
+export interface DiscordRole {
+  id: string;
+  name: string;
+  color: number;
+  position: number;
+  managed: boolean;
+}
+
+export interface DiscordGuildDetail {
+  id: string;
+  name: string;
+  icon: string | null;
+  approximate_member_count?: number;
+  approximate_presence_count?: number;
+  premium_subscription_count?: number;
+  premium_tier: number;
+  member_count?: number;
+}
+
+function botHeaders() {
+  // Le token Discord du bot est partagé entre le bot et l'API.
+  // On accepte DISCORD_TOKEN (préféré) ou BOT_TOKEN (alias historique).
+  const token = process.env.DISCORD_TOKEN ?? process.env.BOT_TOKEN;
+  return { Authorization: `Bot ${token}` };
+}
+
+export async function getBotGuildChannels(guildId: string): Promise<DiscordChannel[]> {
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, { headers: botHeaders() });
+  if (!res.ok) throw new Error(`Discord channels error: ${res.status}`);
+  return res.json();
+}
+
+export async function getBotGuildRoles(guildId: string): Promise<DiscordRole[]> {
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/roles`, { headers: botHeaders() });
+  if (!res.ok) throw new Error(`Discord roles error: ${res.status}`);
+  return res.json();
+}
+
+export async function getBotGuildDetail(guildId: string): Promise<DiscordGuildDetail> {
+  const res = await fetch(`${DISCORD_API}/guilds/${guildId}?with_counts=true`, { headers: botHeaders() });
+  if (!res.ok) throw new Error(`Discord guild error: ${res.status}`);
+  return res.json();
+}
