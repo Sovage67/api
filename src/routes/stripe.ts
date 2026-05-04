@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../lib/prisma.js';
-import { publishEvent } from '../lib/redis.js';
+import { redis, publishEvent } from '../lib/redis.js';
 
 /**
  * Webhook Stripe pour gérer les abonnements premium.
@@ -39,6 +39,14 @@ export async function stripeRoutes(app: FastifyInstance) {
     } catch (err) {
       app.log.error({ err }, 'Signature Stripe invalide');
       return reply.status(400).send({ error: 'Signature invalide' });
+    }
+
+    // Anti-rejeu : ignorer les events déjà traités (idempotence)
+    const key = `stripe:event:${event.id}`;
+    const claimed = await redis.set(key, '1', 'EX', 86400, 'NX'); // TTL 24h, anti-rejeu
+    if (!claimed) {
+      app.log.warn({ eventId: event.id }, 'Stripe event already processed — skipping');
+      return { received: true };
     }
 
     switch (event.type) {
