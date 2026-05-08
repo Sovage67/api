@@ -3,7 +3,7 @@
  *
  * Règle : 1 utilisateur Discord = 1 serveur gratuit.
  * - Quota free  : 1 serveur par installerUserId
- * - Quota premium : 5 serveurs par installerUserId
+ * - Quota premium : 3 serveurs par installerUserId
  *
  * Les serveurs au-delà du quota passent en `licenseFrozen = true` et leurs
  * modules avancés sont désactivés, mais ils restent en BDD (pour permettre
@@ -13,7 +13,7 @@
 import { prisma } from './prisma.js';
 
 export const FREE_QUOTA = 1;
-export const PREMIUM_QUOTA = 5;
+export const PREMIUM_QUOTA = 3;
 
 export interface InstallerUsage {
   free: number;       // serveurs gratuits actifs

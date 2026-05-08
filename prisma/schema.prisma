@@ -123,6 +123,7 @@ model MemberLog {
 
   @@index([guildId, userId])
   @@index([userId, createdAt])
+  @@index([guildId, type, createdAt])
 }
 
 model Subscription {

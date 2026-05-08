@@ -1,51 +1,68 @@
+import crypto from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { exchangeCode, getCurrentUser } from '../lib/discord.js';
 import { prisma } from '../lib/prisma.js';
+import { redis } from '../lib/redis.js';
+
+async function generateOAuthState(): Promise<string> {
+  const state = crypto.randomBytes(32).toString('hex');
+  await redis.set('oauth:state:' + state, '1', 'EX', 600);
+  return state;
+}
+
+async function verifyOAuthState(state: string): Promise<boolean> {
+  const key = 'oauth:state:' + state;
+  const exists = await redis.get(key);
+  if (!exists) return false;
+  await redis.del(key);
+  return true;
+}
 
 export async function authRoutes(app: FastifyInstance) {
-  // GET /api/auth/login → redirige vers Discord
-  app.get('/login', async (_request, reply) => {
+  const authRateLimit = { config: { rateLimit: { max: 10, timeWindow: '5 minutes' } } };
+
+  app.get('/login', authRateLimit, async (_request, reply) => {
+    const state = await generateOAuthState();
     const params = new URLSearchParams({
       client_id: process.env.DISCORD_CLIENT_ID!,
       redirect_uri: process.env.DISCORD_REDIRECT_URI!,
       response_type: 'code',
       scope: 'identify guilds',
       prompt: 'none',
+      state,
     });
-    return reply.redirect(`https://discord.com/api/oauth2/authorize?${params}`);
+    return reply.redirect('https://discord.com/api/oauth2/authorize?' + params.toString());
   });
 
-  // GET /api/auth/callback → échange le code contre un token et crée la session
-  app.get<{ Querystring: { code?: string; error?: string } }>(
+  app.get<{ Querystring: { code?: string; error?: string; state?: string } }>(
     '/callback',
+    authRateLimit,
     async (request, reply) => {
-      if (request.query.error) {
-        return reply.redirect('/?error=oauth_denied');
+      if (request.query.error) return reply.redirect('/?error=oauth_denied');
+
+      const { code, state } = request.query;
+      if (!state || !(await verifyOAuthState(state))) {
+        request.log.warn('OAuth callback: invalid CSRF state');
+        return reply.redirect('/?error=invalid_state');
       }
-      const code = request.query.code;
-      if (!code) {
-        return reply.status(400).send({ error: 'Code manquant' });
-      }
+      if (!code) return reply.status(400).send({ error: 'Code manquant' });
 
       try {
         const tokens = await exchangeCode(code);
         const discordUser = await getCurrentUser(tokens.access_token);
 
-        // Upsert user en BDD
         await prisma.user.upsert({
           where: { id: discordUser.id },
           create: { id: discordUser.id, username: discordUser.username },
           update: { username: discordUser.username },
         });
 
-        // Créer un JWT signé contenant l'access token Discord
+        const sessionId = crypto.randomBytes(32).toString('hex');
+        await redis.set('session:token:' + sessionId, tokens.access_token, 'EX', tokens.expires_in);
+
         const token = await reply.jwtSign(
-          {
-            id: discordUser.id,
-            username: discordUser.username,
-            accessToken: tokens.access_token,
-          },
-          { expiresIn: `${tokens.expires_in}s` },
+          { id: discordUser.id, username: discordUser.username, sessionId },
+          { expiresIn: tokens.expires_in + 's' },
         );
 
         const isProd = process.env.NODE_ENV === 'production';
@@ -60,14 +77,17 @@ export async function authRoutes(app: FastifyInstance) {
 
         return reply.redirect(process.env.CORS_ORIGIN ?? 'http://localhost:3000');
       } catch (err) {
-        request.log.error({ err }, 'Erreur OAuth callback');
+        request.log.error({ err }, 'OAuth callback error');
         return reply.redirect('/?error=oauth_failed');
       }
     },
   );
 
-  // POST /api/auth/logout → supprime le cookie
-  app.post('/logout', async (_request, reply) => {
+  app.post('/logout', async (request, reply) => {
+    try {
+      const decoded = await request.jwtVerify<{ sessionId?: string }>({ onlyCookie: true });
+      if (decoded?.sessionId) await redis.del('session:token:' + decoded.sessionId);
+    } catch { /* JWT expire ou absent */ }
     reply.clearCookie('session', { path: '/' });
     return { success: true };
   });

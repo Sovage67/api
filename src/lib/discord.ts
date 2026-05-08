@@ -1,7 +1,15 @@
-/**
- * Helpers pour appeler l'API REST de Discord.
- */
 const DISCORD_API = 'https://discord.com/api/v10';
+
+/** fetch() avec timeout automatique de 5 secondes */
+async function discordFetch(url: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export interface DiscordUser {
   id: string;
@@ -32,48 +40,39 @@ export async function exchangeCode(code: string): Promise<{
     code,
     redirect_uri: process.env.DISCORD_REDIRECT_URI!,
   });
-
-  const res = await fetch(`${DISCORD_API}/oauth2/token`, {
+  const res = await discordFetch(DISCORD_API + '/oauth2/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: params,
   });
-
-  if (!res.ok) {
-    throw new Error(`Échange OAuth échoué : ${res.status}`);
-  }
+  if (!res.ok) throw new Error('OAuth exchange failed: ' + res.status);
   return res.json();
 }
 
 export async function getCurrentUser(accessToken: string): Promise<DiscordUser> {
-  const res = await fetch(`${DISCORD_API}/users/@me`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+  const res = await discordFetch(DISCORD_API + '/users/@me', {
+    headers: { Authorization: 'Bearer ' + accessToken },
   });
-  if (!res.ok) throw new Error('Impossible de récupérer l\'utilisateur');
+  if (!res.ok) throw new Error('Cannot fetch user: ' + res.status);
   return res.json();
 }
 
 export async function getCurrentUserGuilds(accessToken: string): Promise<DiscordGuild[]> {
-  const res = await fetch(`${DISCORD_API}/users/@me/guilds`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+  const res = await discordFetch(DISCORD_API + '/users/@me/guilds', {
+    headers: { Authorization: 'Bearer ' + accessToken },
   });
-  if (!res.ok) throw new Error('Impossible de récupérer les serveurs');
+  if (!res.ok) throw new Error('Cannot fetch guilds: ' + res.status);
   return res.json();
 }
 
-/**
- * Vérifier si l'utilisateur a la permission ADMINISTRATOR (0x8) sur la guilde.
- */
 export function hasAdminPermission(permissions: string): boolean {
   return (BigInt(permissions) & 0x8n) === 0x8n;
 }
 
-// ── Helpers bot token (pour récupérer salons/rôles) ──────────────────────────
-
 export interface DiscordChannel {
   id: string;
   name: string;
-  type: number; // 0=text, 2=voice, 4=category, 5=news, 13=stage, 15=forum
+  type: number;
   position: number;
   parent_id: string | null;
 }
@@ -98,26 +97,24 @@ export interface DiscordGuildDetail {
 }
 
 function botHeaders() {
-  // Le token Discord du bot est partagé entre le bot et l'API.
-  // On accepte DISCORD_TOKEN (préféré) ou BOT_TOKEN (alias historique).
   const token = process.env.DISCORD_TOKEN ?? process.env.BOT_TOKEN;
-  return { Authorization: `Bot ${token}` };
+  return { Authorization: 'Bot ' + token };
 }
 
 export async function getBotGuildChannels(guildId: string): Promise<DiscordChannel[]> {
-  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/channels`, { headers: botHeaders() });
-  if (!res.ok) throw new Error(`Discord channels error: ${res.status}`);
+  const res = await discordFetch(DISCORD_API + '/guilds/' + guildId + '/channels', { headers: botHeaders() });
+  if (!res.ok) throw new Error('Discord channels error: ' + res.status);
   return res.json();
 }
 
 export async function getBotGuildRoles(guildId: string): Promise<DiscordRole[]> {
-  const res = await fetch(`${DISCORD_API}/guilds/${guildId}/roles`, { headers: botHeaders() });
-  if (!res.ok) throw new Error(`Discord roles error: ${res.status}`);
+  const res = await discordFetch(DISCORD_API + '/guilds/' + guildId + '/roles', { headers: botHeaders() });
+  if (!res.ok) throw new Error('Discord roles error: ' + res.status);
   return res.json();
 }
 
 export async function getBotGuildDetail(guildId: string): Promise<DiscordGuildDetail> {
-  const res = await fetch(`${DISCORD_API}/guilds/${guildId}?with_counts=true`, { headers: botHeaders() });
-  if (!res.ok) throw new Error(`Discord guild error: ${res.status}`);
+  const res = await discordFetch(DISCORD_API + '/guilds/' + guildId + '?with_counts=true', { headers: botHeaders() });
+  if (!res.ok) throw new Error('Discord guild error: ' + res.status);
   return res.json();
 }
