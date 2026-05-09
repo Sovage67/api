@@ -98,6 +98,3 @@ export async function stripeRoutes(app: FastifyInstance) {
     return { received: true };
   });
 }
-};
-  });
-}
