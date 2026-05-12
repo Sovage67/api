@@ -11,6 +11,7 @@ import { authRoutes } from './routes/auth.js';
 import { guildRoutes } from './routes/guilds.js';
 import { userRoutes } from './routes/user.js';
 import { stripeRoutes } from './routes/stripe.js';
+import { ownerRoutes } from './routes/owner.js';
 
 const SESSION_SECRET = process.env.SESSION_SECRET ?? '';
 if (!SESSION_SECRET || SESSION_SECRET === 'change-me-please' || SESSION_SECRET.length < 32) {
@@ -133,6 +134,7 @@ async function bootstrap() {
   await app.register(userRoutes, { prefix: '/api/user' });
   await app.register(guildRoutes, { prefix: '/api/guilds' });
   await app.register(stripeRoutes, { prefix: '/api/stripe' });
+  await app.register(ownerRoutes, { prefix: '/api/owner' });
 
   app.setErrorHandler((error: FastifyError, _request, reply) => {
     app.log.error(error);
