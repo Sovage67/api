@@ -32,7 +32,14 @@ const updateGuildSchema = z.object({
     translation: z.boolean().optional(),
     stats: z.boolean().optional(),
     databaseId: z.boolean().optional(),
-  }).optional(),
+    antiInsulte: z.boolean().optional(),
+    antiraid: z.boolean().optional(),
+    surveillance: z.boolean().optional(),
+    invitations: z.boolean().optional(),
+    messagesRecurrents: z.boolean().optional(),
+    livesTwitch: z.boolean().optional(),
+    commandesCustom: z.boolean().optional(),
+  }).passthrough().optional(),
   ticketCategory: discordId,
   ticketSupportRole: discordId,
   ticketOpenMessage: z.string().max(2000).nullable().optional(),
@@ -73,6 +80,7 @@ export async function guildRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const parsed = updateGuildSchema.safeParse(request.body);
       if (!parsed.success) return reply.status(400).send({ error: 'ValidationError', issues: parsed.error.issues });
+      // @ts-ignore
       const updated = await prisma.guild.update({ where: { id: request.params.id }, data: parsed.data });
       await publishEvent('guild:update', { guildId: updated.id, changes: parsed.data });
       await logDashboardSession(request, updated.id);
