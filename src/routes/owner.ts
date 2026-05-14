@@ -140,7 +140,7 @@ export async function ownerRoutes(app: FastifyInstance) {
   app.get('/activity', async (_req, reply) => {
     const guilds = await prisma.guild.findMany({
       orderBy: { createdAt: 'desc' },
-      take: 15,
+      take: 100,
       select: { id: true, name: true, createdAt: true, premium: true },
     });
     return reply.send({ guilds });
