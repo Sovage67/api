@@ -151,7 +151,7 @@ export async function guildRoutes(app: FastifyInstance) {
       try {
         const heatmapStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-        const [memberLogs, messageData, heatmapRaw] = await Promise.all([
+        const [memberLogs, messageData, heatmapRaw, reactionData] = await Promise.all([
           prisma.memberLog.findMany({
             where: { guildId, createdAt: { gte: startDate } },
             select: { type: true, createdAt: true },
@@ -167,6 +167,12 @@ export async function guildRoutes(app: FastifyInstance) {
           prisma.messageActivity.findMany({
             where: { guildId, bucket: { gte: heatmapStart } },
             select: { bucket: true, count: true },
+          }),
+          // @ts-ignore — ReactionActivity ajouté via migration Prisma
+          prisma.reactionActivity.findMany({
+            where: { guildId, bucket: { gte: startDate } },
+            select: { bucket: true, count: true },
+            orderBy: { bucket: 'asc' },
           }),
         ]);
 
@@ -202,7 +208,13 @@ export async function guildRoutes(app: FastifyInstance) {
           return { day, hour, count };
         });
 
-        return { range, members, messages, heatmap };
+        // Réactions : buckets horaires bruts (agrégation côté dashboard)
+        const reactions = (reactionData as { bucket: Date; count: number }[]).map(r => ({
+          date: r.bucket.toISOString(),
+          count: r.count,
+        }));
+
+        return { range, members, messages, heatmap, reactions };
       } catch {
         return reply.status(502).send({ error: 'Impossible de récupérer l\'historique.' });
       }
