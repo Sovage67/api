@@ -132,6 +132,63 @@ export async function guildRoutes(app: FastifyInstance) {
     }
   });
 
+  app.get<{ Params: { id: string }; Querystring: { range?: string } }>(
+    '/:id/stats/history',
+    { preHandler: requireGuildAdmin },
+    async (request, reply) => {
+      const range = request.query.range ?? 'week';
+      const now = new Date();
+      let startDate: Date;
+      switch (range) {
+        case 'day':   startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); break;
+        case 'month': startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); break;
+        case 'year':  startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); break;
+        default:      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      }
+
+      const guildId = request.params.id;
+
+      try {
+        const [memberLogs, messageData] = await Promise.all([
+          prisma.memberLog.findMany({
+            where: { guildId, createdAt: { gte: startDate } },
+            select: { type: true, createdAt: true },
+            orderBy: { createdAt: 'asc' },
+          }),
+          // @ts-ignore — MessageActivity ajouté via migration Prisma
+          prisma.messageActivity.findMany({
+            where: { guildId, bucket: { gte: startDate } },
+            select: { bucket: true, count: true },
+            orderBy: { bucket: 'asc' },
+          }),
+        ]);
+
+        // Grouper les logs membres par jour
+        const memberByDay = new Map<string, { joins: number; leaves: number }>();
+        for (const log of memberLogs) {
+          const day = log.createdAt.toISOString().slice(0, 10);
+          if (!memberByDay.has(day)) memberByDay.set(day, { joins: 0, leaves: 0 });
+          const entry = memberByDay.get(day)!;
+          if (log.type === 'join') entry.joins++;
+          else entry.leaves++;
+        }
+        const members = Array.from(memberByDay.entries())
+          .map(([date, d]) => ({ date, joins: d.joins, leaves: d.leaves, net: d.joins - d.leaves }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        // Retourner les buckets horaires bruts (agrégation côté dashboard)
+        const messages = (messageData as { bucket: Date; count: number }[]).map(m => ({
+          date: m.bucket.toISOString(),
+          count: m.count,
+        }));
+
+        return { range, members, messages };
+      } catch {
+        return reply.status(502).send({ error: 'Impossible de récupérer l\'historique.' });
+      }
+    },
+  );
+
   app.get<{ Params: { id: string }; Querystring: { page?: string; type?: string } }>(
     '/:id/logs',
     { preHandler: requireGuildAdmin },

@@ -173,3 +173,13 @@ model GuildRiskScore {
 
   @@index([flagged, score])
 }
+
+model MessageActivity {
+  id      Int      @id @default(autoincrement())
+  guildId String
+  bucket  DateTime // Tronqué à l'heure UTC
+  count   Int      @default(0)
+
+  @@unique([guildId, bucket])
+  @@index([guildId, bucket])
+}
