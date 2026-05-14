@@ -149,7 +149,9 @@ export async function guildRoutes(app: FastifyInstance) {
       const guildId = request.params.id;
 
       try {
-        const [memberLogs, messageData] = await Promise.all([
+        const heatmapStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+        const [memberLogs, messageData, heatmapRaw] = await Promise.all([
           prisma.memberLog.findMany({
             where: { guildId, createdAt: { gte: startDate } },
             select: { type: true, createdAt: true },
@@ -160,6 +162,11 @@ export async function guildRoutes(app: FastifyInstance) {
             where: { guildId, bucket: { gte: startDate } },
             select: { bucket: true, count: true },
             orderBy: { bucket: 'asc' },
+          }),
+          // @ts-ignore
+          prisma.messageActivity.findMany({
+            where: { guildId, bucket: { gte: heatmapStart } },
+            select: { bucket: true, count: true },
           }),
         ]);
 
@@ -176,13 +183,26 @@ export async function guildRoutes(app: FastifyInstance) {
           .map(([date, d]) => ({ date, joins: d.joins, leaves: d.leaves, net: d.joins - d.leaves }))
           .sort((a, b) => a.date.localeCompare(b.date));
 
-        // Retourner les buckets horaires bruts (agrégation côté dashboard)
+        // Buckets horaires bruts (agrégation côté dashboard)
         const messages = (messageData as { bucket: Date; count: number }[]).map(m => ({
           date: m.bucket.toISOString(),
           count: m.count,
         }));
 
-        return { range, members, messages };
+        // Heatmap 7j × 24h : grouper par (jour semaine Mon=0, heure)
+        const heatmapMap = new Map<string, number>();
+        for (const h of heatmapRaw as { bucket: Date; count: number }[]) {
+          const dayOfWeek = (h.bucket.getUTCDay() + 6) % 7; // 0=Lun … 6=Dim
+          const hour = h.bucket.getUTCHours();
+          const key = `${dayOfWeek}-${hour}`;
+          heatmapMap.set(key, (heatmapMap.get(key) ?? 0) + h.count);
+        }
+        const heatmap = Array.from(heatmapMap.entries()).map(([key, count]) => {
+          const [day, hour] = key.split('-').map(Number);
+          return { day, hour, count };
+        });
+
+        return { range, members, messages, heatmap };
       } catch {
         return reply.status(502).send({ error: 'Impossible de récupérer l\'historique.' });
       }
