@@ -112,8 +112,8 @@ export async function guildRoutes(app: FastifyInstance) {
         getBotGuildDetail(request.params.id),
         prisma.member.count({ where: { guildId: request.params.id } }),
         prisma.warn.count({ where: { guildId: request.params.id } }),
-        prisma.memberLog.count({ where: { guildId: request.params.id, type: 'join', createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } }),
-        prisma.memberLog.count({ where: { guildId: request.params.id, type: 'leave', createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } }),
+        prisma.memberLog.count({ where: { guildId: request.params.id, type: 'join', createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } } }),
+        prisma.memberLog.count({ where: { guildId: request.params.id, type: 'leave', createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } } }),
       ]);
       return {
         name: guildDetail.name,
