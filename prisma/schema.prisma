@@ -198,7 +198,8 @@ model AntiInsulteConfig {
   id              Int      @id @default(autoincrement())
   guildId         String   @unique
   enabled         Boolean  @default(false)
-  words           String[]
+  words                String[]
+  removedDefaultWords  String[] // mots de la liste par défaut désactivés par le serveur
   action          String   @default("delete") // delete | warn | timeout | kick
   timeoutDuration Int      @default(300)      // secondes (pour action = timeout)
   kickAfterWarns  Int      @default(3)        // nb d'avertissements avant kick (1-5)

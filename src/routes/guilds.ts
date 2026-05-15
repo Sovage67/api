@@ -261,7 +261,8 @@ export async function guildRoutes(app: FastifyInstance) {
 
   const antiInsulteSchema = z.object({
     enabled:         z.boolean().optional(),
-    words:           z.array(z.string().max(50)).max(200).optional(),
+    words:                z.array(z.string().max(50)).max(200).optional(),
+    removedDefaultWords:  z.array(z.string().max(50)).max(200).optional(),
     action:          z.enum(['delete', 'warn', 'timeout', 'kick']).optional(),
     timeoutDuration: z.number().int().min(10).max(2419200).optional(), // 10s → 28 jours
     kickAfterWarns:  z.number().int().min(1).max(5).optional(),
