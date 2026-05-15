@@ -208,6 +208,48 @@ model AntiInsulteLog {
   @@index([guildId, userId])
 }
 
+model AntiRaidConfig {
+  id             Int      @id @default(autoincrement())
+  guildId        String   @unique
+  enabled        Boolean  @default(false)
+  // Détection flood d'arrivées
+  joinEnabled    Boolean  @default(true)
+  joinThreshold  Int      @default(8)   // nb de joins déclencheurs
+  joinWindow     Int      @default(3)   // en secondes
+  // Détection comptes suspects (trop récents)
+  suspectEnabled Boolean  @default(true)
+  minAccountAge  Int      @default(7)   // en jours
+  // Détection bots API (app qui rejoint sans invitation du fondateur)
+  botApiEnabled  Boolean  @default(true)
+  // Détection spam de liens multi-canaux
+  linkEnabled    Boolean  @default(true)
+  linkThreshold  Int      @default(3)   // nb de liens en linkWindow secondes
+  linkWindow     Int      @default(5)   // en secondes
+  // Action : ban avec purge messages
+  banPurgeDays   Int      @default(1)   // 0-7 jours de purge
+  // Alertes
+  logChannelId   String?
+  modPingRoleId  String?
+  updatedAt      DateTime @updatedAt
+
+  @@index([guildId])
+}
+
+model AntiRaidLog {
+  id         Int      @id @default(autoincrement())
+  guildId    String
+  type       String   // "mass_join" | "suspect_account" | "bot_api" | "link_spam"
+  userId     String
+  username   String
+  accountAge Int?     // en jours (pour suspect_account)
+  action     String   // "banned"
+  detail     String?  // info complémentaire (lien, nb joins, etc.)
+  createdAt  DateTime @default(now())
+
+  @@index([guildId, createdAt])
+  @@index([guildId, userId])
+}
+
 model AntiInsulteConfig {
   id              Int      @id @default(autoincrement())
   guildId         String   @unique

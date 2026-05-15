@@ -349,6 +349,84 @@ export async function guildRoutes(app: FastifyInstance) {
     },
   );
 
+  // ── Anti-Raid ───────────────────────────────────────────────────────────────
+  app.get<{ Params: { id: string } }>('/:id/antiraid', { preHandler: requireGuildAdmin }, async (request, reply) => {
+    try {
+      // @ts-ignore
+      let cfg = await prisma.antiRaidConfig.findUnique({ where: { guildId: request.params.id } });
+      if (!cfg) {
+        // @ts-ignore
+        cfg = await prisma.antiRaidConfig.create({ data: { guildId: request.params.id } });
+      }
+      return cfg;
+    } catch {
+      return reply.status(500).send({ error: 'Erreur lors de la récupération de la config anti-raid.' });
+    }
+  });
+
+  const antiRaidSchema = z.object({
+    enabled:        z.boolean().optional(),
+    joinEnabled:    z.boolean().optional(),
+    joinThreshold:  z.number().int().min(2).max(100).optional(),
+    joinWindow:     z.number().int().min(1).max(60).optional(),
+    suspectEnabled: z.boolean().optional(),
+    minAccountAge:  z.number().int().min(0).max(365).optional(),
+    botApiEnabled:  z.boolean().optional(),
+    linkEnabled:    z.boolean().optional(),
+    linkThreshold:  z.number().int().min(1).max(20).optional(),
+    linkWindow:     z.number().int().min(1).max(60).optional(),
+    banPurgeDays:   z.number().int().min(0).max(7).optional(),
+    logChannelId:   z.string().regex(/^\d{17,20}$/).nullable().optional(),
+    modPingRoleId:  z.string().regex(/^\d{17,20}$/).nullable().optional(),
+  });
+
+  app.patch<{ Params: { id: string }; Body: z.infer<typeof antiRaidSchema> }>(
+    '/:id/antiraid',
+    { preHandler: requireGuildAdmin },
+    async (request, reply) => {
+      const parsed = antiRaidSchema.safeParse(request.body);
+      if (!parsed.success) return reply.status(400).send({ error: 'ValidationError', issues: parsed.error.issues });
+      try {
+        // @ts-ignore
+        const cfg = await prisma.antiRaidConfig.upsert({
+          where: { guildId: request.params.id },
+          create: { guildId: request.params.id, ...parsed.data },
+          update: parsed.data,
+        });
+        await publishEvent('antiraid:update', { guildId: request.params.id });
+        return cfg;
+      } catch {
+        return reply.status(500).send({ error: 'Erreur lors de la mise à jour de la config anti-raid.' });
+      }
+    },
+  );
+
+  app.get<{ Params: { id: string }; Querystring: { page?: string } }>(
+    '/:id/antiraid/logs',
+    { preHandler: requireGuildAdmin },
+    async (request, reply) => {
+      const page = Math.max(1, parseInt(request.query.page ?? '1', 10));
+      const take = 50;
+      const skip = (page - 1) * take;
+      try {
+        // @ts-ignore
+        const [logs, total] = await Promise.all([
+          // @ts-ignore
+          prisma.antiRaidLog.findMany({
+            where: { guildId: request.params.id },
+            orderBy: { createdAt: 'desc' },
+            take, skip,
+          }),
+          // @ts-ignore
+          prisma.antiRaidLog.count({ where: { guildId: request.params.id } }),
+        ]);
+        return { logs, total, page, pages: Math.ceil(total / take) };
+      } catch {
+        return reply.status(500).send({ error: 'Erreur lors de la récupération des logs anti-raid.' });
+      }
+    },
+  );
+
   app.patch<{ Params: { id: string }; Body: z.infer<typeof antiInsulteSchema> }>(
     '/:id/antiinsulte',
     { preHandler: requireGuildAdmin },
