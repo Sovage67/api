@@ -265,6 +265,9 @@ export async function guildRoutes(app: FastifyInstance) {
     action:          z.enum(['delete', 'warn', 'timeout', 'kick']).optional(),
     timeoutDuration: z.number().int().min(10).max(2419200).optional(), // 10s → 28 jours
     kickAfterWarns:  z.number().int().min(1).max(3).optional(),
+    warnMessage:     z.string().max(500).nullable().optional(),
+    warnDm:          z.boolean().optional(),
+    warnChannelId:   z.string().regex(/^\d{17,20}$/).nullable().optional(),
     exemptRoles:     z.array(z.string().regex(/^\d{17,20}$/)).max(50).optional(),
     exemptChannels:  z.array(z.string().regex(/^\d{17,20}$/)).max(50).optional(),
     logChannelId:    z.string().regex(/^\d{17,20}$/).nullable().optional(),
