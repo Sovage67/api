@@ -300,7 +300,7 @@ export async function guildRoutes(app: FastifyInstance) {
           where: { guildId: request.params.id },
           _count: { id: true },
           orderBy: { _count: { id: 'desc' } },
-          take: 5,
+          take: 50,
         });
         const topOffenders = raw.map((r: { userId: string; username: string; _count: { id: number } }) => ({
           userId: r.userId,
