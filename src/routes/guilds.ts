@@ -333,6 +333,22 @@ export async function guildRoutes(app: FastifyInstance) {
     },
   );
 
+  app.delete<{ Params: { id: string; userId: string } }>(
+    '/:id/antiinsulte/logs/user/:userId',
+    { preHandler: requireGuildAdmin },
+    async (request, reply) => {
+      try {
+        // @ts-ignore
+        const { count } = await prisma.antiInsulteLog.deleteMany({
+          where: { guildId: request.params.id, userId: request.params.userId },
+        });
+        return { deleted: count };
+      } catch {
+        return reply.status(500).send({ error: 'Erreur lors de la suppression.' });
+      }
+    },
+  );
+
   app.patch<{ Params: { id: string }; Body: z.infer<typeof antiInsulteSchema> }>(
     '/:id/antiinsulte',
     { preHandler: requireGuildAdmin },
