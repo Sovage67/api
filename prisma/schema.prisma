@@ -223,6 +223,7 @@ model AntiInsulteConfig {
   exemptRoles     String[]
   exemptChannels  String[]
   logChannelId    String?
+  modPingRoleId   String?            // rôle à mentionner dans le salon de logs
   updatedAt       DateTime @updatedAt
 
   @@index([guildId])

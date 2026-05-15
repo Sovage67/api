@@ -272,7 +272,26 @@ export async function guildRoutes(app: FastifyInstance) {
     exemptRoles:     z.array(z.string().regex(/^\d{17,20}$/)).max(50).optional(),
     exemptChannels:  z.array(z.string().regex(/^\d{17,20}$/)).max(50).optional(),
     logChannelId:    z.string().regex(/^\d{17,20}$/).nullable().optional(),
+    modPingRoleId:   z.string().regex(/^\d{17,20}$/).nullable().optional(),
   });
+
+  app.get<{ Params: { id: string } }>(
+    '/:id/antiinsulte/logs/export',
+    { preHandler: requireGuildAdmin },
+    async (request, reply) => {
+      try {
+        // @ts-ignore
+        const logs = await prisma.antiInsulteLog.findMany({
+          where: { guildId: request.params.id },
+          orderBy: { createdAt: 'desc' },
+          take: 10000,
+        });
+        return logs;
+      } catch {
+        return reply.status(500).send({ error: 'Erreur lors de l\'export.' });
+      }
+    },
+  );
 
   app.get<{ Params: { id: string }; Querystring: { page?: string } }>(
     '/:id/antiinsulte/logs',
