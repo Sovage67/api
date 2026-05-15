@@ -270,7 +270,7 @@ model ArriveesDepartsConfig {
   // Bienvenue
   welcomeEnabled  Boolean  @default(false)
   welcomeChannel  String?
-  welcomeMessage  String   @default("**Bienvenue {user.mention} sur {server.name} !**\nTu es notre membre numéro **{server.memberCount}** 🎉")
+  welcomeMessage  String   @default("**Bienvenue {user.mention} sur {server.name} !**")
   welcomeFormat   String   @default("embed")   // text | embed
   welcomeMention  Boolean  @default(true)
   // Au revoir
