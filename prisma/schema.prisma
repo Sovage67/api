@@ -217,9 +217,9 @@ model AntiInsulteConfig {
   action          String   @default("delete") // delete | warn | timeout | kick
   timeoutDuration Int      @default(300)      // secondes (pour action = timeout)
   kickAfterWarns  Int      @default(3)        // nb d'avertissements avant kick (1-5)
-  warnMessage     String?                    // message personnalisé d'avertissement
+  warnMaxCount    Int      @default(1)        // nb d'avertissements personnalisés (1-5)
+  warnMessages    String[]                   // messages par niveau d'avertissement (index 0 = warn 1)
   warnDm          Boolean  @default(true)    // envoyer en DM
-  warnChannelId   String?                    // salon dédié pour l'avertissement
   exemptRoles     String[]
   exemptChannels  String[]
   logChannelId    String?
