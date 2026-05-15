@@ -199,8 +199,9 @@ model AntiInsulteConfig {
   guildId         String   @unique
   enabled         Boolean  @default(false)
   words           String[]
-  action          String   @default("delete") // delete | warn | timeout | kick | ban
+  action          String   @default("delete") // delete | warn | timeout | kick
   timeoutDuration Int      @default(300)      // secondes (pour action = timeout)
+  kickAfterWarns  Int      @default(3)        // nb d'avertissements avant kick (1-3)
   exemptRoles     String[]
   exemptChannels  String[]
   logChannelId    String?
