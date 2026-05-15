@@ -194,6 +194,20 @@ model ReactionActivity {
   @@index([guildId, bucket])
 }
 
+model AntiInsulteLog {
+  id             Int      @id @default(autoincrement())
+  guildId        String
+  userId         String
+  username       String
+  word           String
+  action         String
+  messageContent String
+  createdAt      DateTime @default(now())
+
+  @@index([guildId, createdAt])
+  @@index([guildId, userId])
+}
+
 model AntiInsulteConfig {
   id              Int      @id @default(autoincrement())
   guildId         String   @unique

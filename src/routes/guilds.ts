@@ -274,6 +274,46 @@ export async function guildRoutes(app: FastifyInstance) {
     logChannelId:    z.string().regex(/^\d{17,20}$/).nullable().optional(),
   });
 
+  app.get<{ Params: { id: string }; Querystring: { page?: string } }>(
+    '/:id/antiinsulte/logs',
+    { preHandler: requireGuildAdmin },
+    async (request, reply) => {
+      const page = Math.max(1, parseInt(request.query.page ?? '1', 10));
+      const take = 50;
+      const skip = (page - 1) * take;
+      try {
+        // @ts-ignore
+        const [logs, total] = await Promise.all([
+          // @ts-ignore
+          prisma.antiInsulteLog.findMany({
+            where: { guildId: request.params.id },
+            orderBy: { createdAt: 'desc' },
+            take, skip,
+          }),
+          // @ts-ignore
+          prisma.antiInsulteLog.count({ where: { guildId: request.params.id } }),
+        ]);
+        // Top offenders
+        // @ts-ignore
+        const raw = await prisma.antiInsulteLog.groupBy({
+          by: ['userId', 'username'],
+          where: { guildId: request.params.id },
+          _count: { id: true },
+          orderBy: { _count: { id: 'desc' } },
+          take: 5,
+        });
+        const topOffenders = raw.map((r: { userId: string; username: string; _count: { id: number } }) => ({
+          userId: r.userId,
+          username: r.username,
+          count: r._count.id,
+        }));
+        return { logs, total, page, pages: Math.ceil(total / take), topOffenders };
+      } catch {
+        return reply.status(500).send({ error: 'Erreur lors de la récupération des logs.' });
+      }
+    },
+  );
+
   app.patch<{ Params: { id: string }; Body: z.infer<typeof antiInsulteSchema> }>(
     '/:id/antiinsulte',
     { preHandler: requireGuildAdmin },
