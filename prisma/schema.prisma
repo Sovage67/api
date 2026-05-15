@@ -193,3 +193,18 @@ model ReactionActivity {
   @@unique([guildId, bucket])
   @@index([guildId, bucket])
 }
+
+model AntiInsulteConfig {
+  id              Int      @id @default(autoincrement())
+  guildId         String   @unique
+  enabled         Boolean  @default(false)
+  words           String[]
+  action          String   @default("delete") // delete | warn | timeout | kick | ban
+  timeoutDuration Int      @default(300)      // secondes (pour action = timeout)
+  exemptRoles     String[]
+  exemptChannels  String[]
+  logChannelId    String?
+  updatedAt       DateTime @updatedAt
+
+  @@index([guildId])
+}

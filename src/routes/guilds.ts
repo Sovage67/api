@@ -241,4 +241,53 @@ export async function guildRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>('/:id/warns', { preHandler: requireGuildAdmin }, async (request) => {
     return prisma.warn.findMany({ where: { guildId: request.params.id }, orderBy: { createdAt: 'desc' }, take: 100 });
   });
+
+  // ── Anti-Insulte ────────────────────────────────────────────────────────────
+  app.get<{ Params: { id: string } }>('/:id/antiinsulte', { preHandler: requireGuildAdmin }, async (request, reply) => {
+    try {
+      // @ts-ignore
+      let cfg = await prisma.antiInsulteConfig.findUnique({ where: { guildId: request.params.id } });
+      if (!cfg) {
+        // @ts-ignore
+        cfg = await prisma.antiInsulteConfig.create({
+          data: { guildId: request.params.id, words: [], exemptRoles: [], exemptChannels: [] },
+        });
+      }
+      return cfg;
+    } catch {
+      return reply.status(500).send({ error: 'Erreur lors de la récupération de la config.' });
+    }
+  });
+
+  const antiInsulteSchema = z.object({
+    enabled:         z.boolean().optional(),
+    words:           z.array(z.string().max(50)).max(200).optional(),
+    action:          z.enum(['delete', 'warn', 'timeout', 'kick', 'ban']).optional(),
+    timeoutDuration: z.number().int().min(10).max(2419200).optional(), // 10s → 28 jours
+    exemptRoles:     z.array(z.string().regex(/^\d{17,20}$/)).max(50).optional(),
+    exemptChannels:  z.array(z.string().regex(/^\d{17,20}$/)).max(50).optional(),
+    logChannelId:    z.string().regex(/^\d{17,20}$/).nullable().optional(),
+  });
+
+  app.patch<{ Params: { id: string }; Body: z.infer<typeof antiInsulteSchema> }>(
+    '/:id/antiinsulte',
+    { preHandler: requireGuildAdmin },
+    async (request, reply) => {
+      const parsed = antiInsulteSchema.safeParse(request.body);
+      if (!parsed.success) return reply.status(400).send({ error: 'ValidationError', issues: parsed.error.issues });
+      try {
+        // @ts-ignore
+        const cfg = await prisma.antiInsulteConfig.upsert({
+          where: { guildId: request.params.id },
+          create: { guildId: request.params.id, words: [], exemptRoles: [], exemptChannels: [], ...parsed.data },
+          update: parsed.data,
+        });
+        // Invalider le cache bot via Redis pub/sub
+        await publishEvent('antiinsulte:update', { guildId: request.params.id });
+        return cfg;
+      } catch {
+        return reply.status(500).send({ error: 'Erreur lors de la mise à jour.' });
+      }
+    },
+  );
 }
