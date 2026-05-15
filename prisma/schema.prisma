@@ -250,6 +250,20 @@ model AntiRaidLog {
   @@index([guildId, userId])
 }
 
+model TraductionConfig {
+  id           Int      @id @default(autoincrement())
+  guildId      String   @unique
+  enabled      Boolean  @default(false)
+  targetLang   String   @default("fr")
+  mode         String   @default("reply")      // reply | embed
+  channelMode  String   @default("all")         // all | whitelist | blacklist
+  channels     String[]
+  skipSameLang Boolean  @default(true)
+  updatedAt    DateTime @updatedAt
+
+  @@index([guildId])
+}
+
 model AntiInsulteConfig {
   id              Int      @id @default(autoincrement())
   guildId         String   @unique

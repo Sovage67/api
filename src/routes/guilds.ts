@@ -427,6 +427,53 @@ export async function guildRoutes(app: FastifyInstance) {
     },
   );
 
+  // ── Traduction auto ──────────────────────────────────────────────────────────
+  app.get<{ Params: { id: string } }>('/:id/traduction', { preHandler: requireGuildAdmin }, async (request, reply) => {
+    try {
+      // @ts-ignore
+      let cfg = await prisma.traductionConfig.findUnique({ where: { guildId: request.params.id } });
+      if (!cfg) {
+        // @ts-ignore
+        cfg = await prisma.traductionConfig.create({
+          data: { guildId: request.params.id, channels: [] },
+        });
+      }
+      return cfg;
+    } catch {
+      return reply.status(500).send({ error: 'Erreur lors de la récupération de la config traduction.' });
+    }
+  });
+
+  const traductionSchema = z.object({
+    enabled:      z.boolean().optional(),
+    targetLang:   z.enum(['fr','en','es','de','it','pt','nl','pl','ru','ja','ko','zh','ar','tr','sv','da','nb','fi','uk','id']).optional(),
+    mode:         z.enum(['reply', 'embed']).optional(),
+    channelMode:  z.enum(['all', 'whitelist', 'blacklist']).optional(),
+    channels:     z.array(z.string().regex(/^\d{17,20}$/)).max(100).optional(),
+    skipSameLang: z.boolean().optional(),
+  });
+
+  app.patch<{ Params: { id: string }; Body: z.infer<typeof traductionSchema> }>(
+    '/:id/traduction',
+    { preHandler: requireGuildAdmin },
+    async (request, reply) => {
+      const parsed = traductionSchema.safeParse(request.body);
+      if (!parsed.success) return reply.status(400).send({ error: 'ValidationError', issues: parsed.error.issues });
+      try {
+        // @ts-ignore
+        const cfg = await prisma.traductionConfig.upsert({
+          where: { guildId: request.params.id },
+          create: { guildId: request.params.id, channels: [], ...parsed.data },
+          update: parsed.data,
+        });
+        await publishEvent('traduction:update', { guildId: request.params.id });
+        return cfg;
+      } catch {
+        return reply.status(500).send({ error: 'Erreur lors de la mise à jour de la config traduction.' });
+      }
+    },
+  );
+
   app.patch<{ Params: { id: string }; Body: z.infer<typeof antiInsulteSchema> }>(
     '/:id/antiinsulte',
     { preHandler: requireGuildAdmin },
