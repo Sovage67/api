@@ -264,6 +264,25 @@ model TraductionConfig {
   @@index([guildId])
 }
 
+model ArriveesDepartsConfig {
+  id              Int      @id @default(autoincrement())
+  guildId         String   @unique
+  // Bienvenue
+  welcomeEnabled  Boolean  @default(false)
+  welcomeChannel  String?
+  welcomeMessage  String   @default("**Bienvenue {user.mention} sur {server.name} !**\nTu es notre membre numéro **{server.memberCount}** 🎉")
+  welcomeFormat   String   @default("embed")   // text | embed
+  welcomeMention  Boolean  @default(true)
+  // Au revoir
+  goodbyeEnabled  Boolean  @default(false)
+  goodbyeChannel  String?
+  goodbyeMessage  String   @default("😢 **{user.username}** vient de quitter {server.name}...")
+  goodbyeFormat   String   @default("embed")   // text | embed
+  updatedAt       DateTime @updatedAt
+
+  @@index([guildId])
+}
+
 model AntiInsulteConfig {
   id              Int      @id @default(autoincrement())
   guildId         String   @unique

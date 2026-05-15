@@ -474,6 +474,54 @@ export async function guildRoutes(app: FastifyInstance) {
     },
   );
 
+  // ── Arrivées & Départs ──────────────────────────────────────────────────────
+  app.get<{ Params: { id: string } }>('/:id/arrivees', { preHandler: requireGuildAdmin }, async (request, reply) => {
+    try {
+      // @ts-ignore
+      let cfg = await prisma.arriveesDepartsConfig.findUnique({ where: { guildId: request.params.id } });
+      if (!cfg) {
+        // @ts-ignore
+        cfg = await prisma.arriveesDepartsConfig.create({ data: { guildId: request.params.id } });
+      }
+      return cfg;
+    } catch {
+      return reply.status(500).send({ error: 'Erreur lors de la récupération de la config arrivées.' });
+    }
+  });
+
+  const arriveeSchema = z.object({
+    welcomeEnabled:  z.boolean().optional(),
+    welcomeChannel:  z.string().regex(/^\d{17,20}$/).nullable().optional(),
+    welcomeMessage:  z.string().max(4000).optional(),
+    welcomeFormat:   z.enum(['text', 'embed']).optional(),
+    welcomeMention:  z.boolean().optional(),
+    goodbyeEnabled:  z.boolean().optional(),
+    goodbyeChannel:  z.string().regex(/^\d{17,20}$/).nullable().optional(),
+    goodbyeMessage:  z.string().max(4000).optional(),
+    goodbyeFormat:   z.enum(['text', 'embed']).optional(),
+  });
+
+  app.patch<{ Params: { id: string }; Body: z.infer<typeof arriveeSchema> }>(
+    '/:id/arrivees',
+    { preHandler: requireGuildAdmin },
+    async (request, reply) => {
+      const parsed = arriveeSchema.safeParse(request.body);
+      if (!parsed.success) return reply.status(400).send({ error: 'ValidationError', issues: parsed.error.issues });
+      try {
+        // @ts-ignore
+        const cfg = await prisma.arriveesDepartsConfig.upsert({
+          where: { guildId: request.params.id },
+          create: { guildId: request.params.id, ...parsed.data },
+          update: parsed.data,
+        });
+        await publishEvent('arrivees:update', { guildId: request.params.id });
+        return cfg;
+      } catch {
+        return reply.status(500).send({ error: 'Erreur lors de la mise à jour de la config arrivées.' });
+      }
+    },
+  );
+
   app.patch<{ Params: { id: string }; Body: z.infer<typeof antiInsulteSchema> }>(
     '/:id/antiinsulte',
     { preHandler: requireGuildAdmin },
