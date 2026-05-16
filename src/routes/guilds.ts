@@ -659,4 +659,20 @@ app.patch<{ Params: { id: string }; Body: z.infer<typeof ticketConfigSchema> }>(
   },
 );
 
+// POST /api/guilds/:id/tickets/post-panel
+app.post<{ Params: { id: string }; Body: { channelId: string } }>(
+  '/:id/tickets/post-panel',
+  { preHandler: requireGuildAdmin },
+  async (request, reply) => {
+    const { channelId } = request.body;
+    if (!channelId) return reply.status(400).send({ error: 'channelId requis.' });
+    try {
+      await publishEvent('tickets:post-panel', { guildId: request.params.id, channelId });
+      return { ok: true };
+    } catch {
+      return reply.status(500).send({ error: 'Erreur lors de l\'envoi de l\'événement.' });
+    }
+  },
+);
+
 }
