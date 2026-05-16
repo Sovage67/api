@@ -547,4 +547,135 @@ export async function guildRoutes(app: FastifyInstance) {
       }
     },
   );
+// ─── TICKETS ──────────────────────────────────────────────────────────────────
+
+const ticketCategorySchema = z.object({
+  id: z.number().optional(),
+  label: z.string().min(1).max(32),
+  emoji: z.string().max(8).default('🎫'),
+  description: z.string().max(100).default(''),
+  categoryId: z.string().nullable().default(null),
+  welcomeMsg: z.string().max(2000).default('Bonjour {user.mention} ! Un modérateur va vous répondre rapidement.'),
+  askReason: z.boolean().default(false),
+  order: z.number().default(0),
+});
+
+const ticketConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  logChannelId: z.string().nullable().optional(),
+  modRoles: z.array(z.string()).optional(),
+  maxPerMember: z.number().min(1).max(10).optional(),
+  mentionMods: z.boolean().optional(),
+  askCloseReason: z.boolean().optional(),
+  autoDelete: z.boolean().optional(),
+  autoDeleteDelay: z.number().min(0).max(60).optional(),
+  transcription: z.boolean().optional(),
+  channelFormat: z.string().max(50).optional(),
+  panelChannelId: z.string().nullable().optional(),
+  panelMessageId: z.string().nullable().optional(),
+  categories: z.array(ticketCategorySchema).optional(),
+});
+
+// GET /api/guilds/:id/tickets
+app.get<{ Params: { id: string } }>(
+  '/:id/tickets',
+  { preHandler: requireGuildAdmin },
+  async (request, reply) => {
+    try {
+      let cfg = await prisma.ticketConfig.findUnique({
+        where: { guildId: request.params.id },
+        include: { categories: { orderBy: { order: 'asc' } } },
+      });
+      if (!cfg) {
+        cfg = await prisma.ticketConfig.create({
+          data: {
+            guildId: request.params.id,
+            categories: {
+              create: [
+                { guildId: request.params.id, label: 'Support', emoji: '🎫', description: 'Aide générale', order: 0 },
+                { guildId: request.params.id, label: 'Bug', emoji: '🐛', description: 'Signaler un problème', order: 1 },
+              ],
+            },
+          },
+          include: { categories: { orderBy: { order: 'asc' } } },
+        });
+      }
+      return cfg;
+    } catch {
+      return reply.status(500).send({ error: 'Erreur lors de la récupération de la config tickets.' });
+    }
+  },
+);
+
+// PATCH /api/guilds/:id/tickets
+app.patch<{ Params: { id: string }; Body: z.infer<typeof ticketConfigSchema> }>(
+  '/:id/tickets',
+  { preHandler: requireGuildAdmin },
+  async (request, reply) => {
+    const parsed = ticketConfigSchema.safeParse(request.body);
+    if (!parsed.success) return reply.status(400).send({ error: 'ValidationError', issues: parsed.error.issues });
+    try {
+      const { categories, ...rest } = parsed.data;
+
+      // Mettre à jour la config principale
+      let cfg = await prisma.ticketConfig.upsert({
+        where: { guildId: request.params.id },
+        create: { guildId: request.params.id, ...rest },
+        update: rest,
+        include: { categories: { orderBy: { order: 'asc' } } },
+      });
+
+      // Gérer les catégories si fournies
+      if (categories !== undefined) {
+        // Supprimer les catégories qui ne sont plus dans la liste
+        const incomingIds = categories.filter(c => c.id).map(c => c.id as number);
+        await prisma.ticketCategory.deleteMany({
+          where: { configId: cfg.id, id: { notIn: incomingIds } },
+        });
+
+        // Upsert chaque catégorie
+        for (const cat of categories) {
+          if (cat.id) {
+            await prisma.ticketCategory.update({
+              where: { id: cat.id },
+              data: {
+                label: cat.label,
+                emoji: cat.emoji,
+                description: cat.description,
+                categoryId: cat.categoryId,
+                welcomeMsg: cat.welcomeMsg,
+                askReason: cat.askReason,
+                order: cat.order,
+              },
+            });
+          } else {
+            await prisma.ticketCategory.create({
+              data: {
+                guildId: request.params.id,
+                configId: cfg.id,
+                label: cat.label,
+                emoji: cat.emoji,
+                description: cat.description,
+                categoryId: cat.categoryId ?? null,
+                welcomeMsg: cat.welcomeMsg,
+                askReason: cat.askReason,
+                order: cat.order,
+              },
+            });
+          }
+        }
+
+        cfg = await prisma.ticketConfig.findUniqueOrThrow({
+          where: { id: cfg.id },
+          include: { categories: { orderBy: { order: 'asc' } } },
+        });
+      }
+
+      await publishEvent('tickets:update', { guildId: request.params.id });
+      return cfg;
+    } catch {
+      return reply.status(500).send({ error: 'Erreur lors de la mise à jour de la config tickets.' });
+    }
+  },
+);
 }

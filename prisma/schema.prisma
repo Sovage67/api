@@ -307,3 +307,64 @@ model AntiInsulteConfig {
 
   @@index([guildId])
 }
+
+model TicketConfig {
+  id              Int              @id @default(autoincrement())
+  guildId         String           @unique
+  enabled         Boolean          @default(false)
+  logChannelId    String?
+  modRoles        String[]
+  maxPerMember    Int              @default(1)
+  mentionMods     Boolean          @default(true)
+  askCloseReason  Boolean          @default(false)
+  autoDelete      Boolean          @default(true)
+  autoDeleteDelay Int              @default(5)
+  transcription   Boolean          @default(true)
+  channelFormat   String           @default("{type}-{username}")
+  panelChannelId  String?
+  panelMessageId  String?
+  updatedAt       DateTime         @updatedAt
+  categories      TicketCategory[]
+
+  @@index([guildId])
+}
+
+model TicketCategory {
+  id          Int      @id @default(autoincrement())
+  guildId     String
+  label       String
+  emoji       String   @default("🎫")
+  description String   @default("")
+  categoryId  String?
+  welcomeMsg  String   @default("Bonjour {user.mention} ! Un modérateur va vous répondre rapidement.")
+  askReason   Boolean  @default(false)
+  order       Int      @default(0)
+  configId    Int
+  config      TicketConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  tickets     Ticket[]
+
+  @@index([guildId])
+  @@index([configId])
+}
+
+model Ticket {
+  id          Int             @id @default(autoincrement())
+  guildId     String
+  channelId   String          @unique
+  userId      String
+  username    String
+  categoryId  Int?
+  category    TicketCategory? @relation(fields: [categoryId], references: [id])
+  reason      String?
+  closeReason String?
+  closedBy    String?
+  closedByName String?
+  status      String          @default("open")
+  transcript  String?
+  createdAt   DateTime        @default(now())
+  closedAt    DateTime?
+
+  @@index([guildId, status])
+  @@index([guildId, userId])
+  @@index([guildId, createdAt])
+}
