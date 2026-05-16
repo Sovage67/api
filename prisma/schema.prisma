@@ -362,4 +362,12 @@ model Ticket {
   closeReason String?
   closedBy    String?
   closedByName String?
-  status      String          @default("
+  status      String          @default("open")
+  transcript   String?
+  createdAt    DateTime        @default(now())
+  closedAt     DateTime?
+
+  @@index([guildId, status])
+  @@index([guildId, userId])
+  @@index([guildId, createdAt])
+}
