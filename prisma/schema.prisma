@@ -318,7 +318,7 @@ model TicketConfig {
   autoDeleteDelay  Int              @default(0)
   // Panel embed
   panelTitle       String           @default("🎫 Ouvrir un ticket")
-  panelDescription String           @default("Sélectionnez le type de votre demande dans le menu ci-dessous.\nUn modérateur vous répondra dès que possible.")
+  panelDescription String           @default("")
   panelColor       String           @default("#57F287")
   panelAuthor      String?
   panelFooter      String?
@@ -362,12 +362,4 @@ model Ticket {
   closeReason String?
   closedBy    String?
   closedByName String?
-  status      String          @default("open")
-  transcript  String?
-  createdAt   DateTime        @default(now())
-  closedAt    DateTime?
-
-  @@index([guildId, status])
-  @@index([guildId, userId])
-  @@index([guildId, createdAt])
-}
+  status      String          @default("
