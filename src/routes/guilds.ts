@@ -591,7 +591,16 @@ app.get<{ Params: { id: string } }>(
       });
       if (!cfg) {
         cfg = await prisma.ticketConfig.create({
-          data: { guildId: request.params.id },
+          data: { guildId: request.params.id, panelDescription: 'Description' },
+          include: { categories: { orderBy: { order: 'asc' } } },
+        });
+      }
+      // Migrer l'ancien texte par défaut vers "Description"
+      const OLD_DESC = "Sélectionnez le type de votre demande dans le menu ci-dessous.";
+      if (!cfg.panelDescription || cfg.panelDescription.startsWith(OLD_DESC)) {
+        cfg = await prisma.ticketConfig.update({
+          where: { guildId: request.params.id },
+          data: { panelDescription: 'Description' },
           include: { categories: { orderBy: { order: 'asc' } } },
         });
       }
