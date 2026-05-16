@@ -327,6 +327,7 @@ model TicketConfig {
   // Actionneur
   actionType       String           @default("selector")  // button | selector
   buttonLabel      String           @default("Ouvrir un ticket")
+  buttonStyle      String           @default("primary")  // primary | secondary | success | danger
   panelChannelId   String?
   panelMessageId   String?
   updatedAt        DateTime         @updatedAt

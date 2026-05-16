@@ -574,6 +574,7 @@ const ticketConfigSchema = z.object({
   // Actionneur
   actionType: z.enum(['button', 'selector']).optional(),
   buttonLabel: z.string().max(80).optional(),
+  buttonStyle: z.enum(['primary','secondary','success','danger']).optional(),
   panelChannelId: z.string().nullable().optional(),
   panelMessageId: z.string().nullable().optional(),
   categories: z.array(ticketCategorySchema).optional(),
