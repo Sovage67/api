@@ -318,7 +318,7 @@ model TicketConfig {
   mentionMods     Boolean          @default(true)
   askCloseReason  Boolean          @default(false)
   autoDelete      Boolean          @default(true)
-  autoDeleteDelay Int              @default(5)
+  autoDeleteDelay Int              @default(0)
   transcription   Boolean          @default(true)
   channelFormat   String           @default("{type}-{username}")
   panelChannelId  String?
