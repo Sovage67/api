@@ -678,4 +678,23 @@ app.patch<{ Params: { id: string }; Body: z.infer<typeof ticketConfigSchema> }>(
     }
   },
 );
+// GET /api/guilds/:id/tickets/history
+app.get<{ Params: { id: string } }>(
+  '/:id/tickets/history',
+  { preHandler: requireGuildAdmin },
+  async (request, reply) => {
+    try {
+      const tickets = await prisma.ticket.findMany({
+        where: { guildId: request.params.id },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+        include: { category: true },
+      });
+      return tickets;
+    } catch {
+      return reply.status(500).send({ error: 'Erreur historique tickets.' });
+    }
+  },
+);
+
 }
