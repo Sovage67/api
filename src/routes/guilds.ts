@@ -564,7 +564,7 @@ const ticketConfigSchema = z.object({
   enabled: z.boolean().optional(),
   logChannelId: z.string().nullable().optional(),
   modRoles: z.array(z.string()).optional(),
-  maxPerMember: z.number().min(1).max(10).optional(),
+  maxPerMember: z.number().min(1).max(3).optional(),
   mentionMods: z.boolean().optional(),
   askCloseReason: z.boolean().optional(),
   autoDelete: z.boolean().optional(),
