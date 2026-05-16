@@ -278,6 +278,8 @@ model ArriveesDepartsConfig {
   goodbyeChannel  String?
   goodbyeMessage  String   @default("😢 **{user.username}** vient de quitter {server.name}...")
   goodbyeFormat   String   @default("embed")   // text | embed
+  welcomeImageUrl String?                       // URL image embed bienvenue
+  goodbyeImageUrl String?                       // URL image embed au revoir
   updatedAt       DateTime @updatedAt
 
   @@index([guildId])

@@ -495,10 +495,12 @@ export async function guildRoutes(app: FastifyInstance) {
     welcomeMessage:  z.string().max(500).optional(),
     welcomeFormat:   z.enum(['text', 'embed']).optional(),
     welcomeMention:  z.boolean().optional(),
+    welcomeImageUrl: z.string().url().max(500).nullable().optional(),
     goodbyeEnabled:  z.boolean().optional(),
     goodbyeChannel:  z.string().regex(/^\d{17,20}$/).nullable().optional(),
     goodbyeMessage:  z.string().max(500).optional(),
     goodbyeFormat:   z.enum(['text', 'embed']).optional(),
+    goodbyeImageUrl: z.string().url().max(500).nullable().optional(),
   });
 
   app.patch<{ Params: { id: string }; Body: z.infer<typeof arriveeSchema> }>(
