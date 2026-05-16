@@ -490,6 +490,8 @@ export async function guildRoutes(app: FastifyInstance) {
   });
 
   const arriveeSchema = z.object({
+    autoRoleEnabled: z.boolean().optional(),
+    autoRoleId:      z.string().regex(/^\d{17,20}$/).nullable().optional(),
     welcomeEnabled:  z.boolean().optional(),
     welcomeChannel:  z.string().regex(/^\d{17,20}$/).nullable().optional(),
     welcomeMessage:  z.string().max(500).optional(),
