@@ -554,23 +554,26 @@ const ticketCategorySchema = z.object({
   label: z.string().min(1).max(32),
   emoji: z.string().max(8).default('🎫'),
   description: z.string().max(100).default(''),
-  categoryId: z.string().nullable().default(null),
-  welcomeMsg: z.string().max(2000).default('Bonjour {user.mention} ! Un modérateur va vous répondre rapidement.'),
-  askReason: z.boolean().default(false),
   order: z.number().default(0),
 });
 
 const ticketConfigSchema = z.object({
   enabled: z.boolean().optional(),
-  logChannelId: z.string().nullable().optional(),
   modRoles: z.array(z.string()).optional(),
   maxPerMember: z.number().min(1).max(3).optional(),
-  mentionMods: z.boolean().optional(),
-  askCloseReason: z.boolean().optional(),
   autoDelete: z.boolean().optional(),
   autoDeleteDelay: z.number().min(0).max(60).optional(),
-  transcription: z.boolean().optional(),
-  channelFormat: z.string().max(50).optional(),
+  // Panel embed
+  panelTitle: z.string().max(256).optional(),
+  panelDescription: z.string().max(4096).optional(),
+  panelColor: z.string().max(7).optional(),
+  panelAuthor: z.string().max(256).nullable().optional(),
+  panelFooter: z.string().max(2048).nullable().optional(),
+  panelImage: z.string().max(1000).nullable().optional(),
+  panelThumbnail: z.string().max(1000).nullable().optional(),
+  // Actionneur
+  actionType: z.enum(['button', 'selector']).optional(),
+  buttonLabel: z.string().max(80).optional(),
   panelChannelId: z.string().nullable().optional(),
   panelMessageId: z.string().nullable().optional(),
   categories: z.array(ticketCategorySchema).optional(),
@@ -588,15 +591,7 @@ app.get<{ Params: { id: string } }>(
       });
       if (!cfg) {
         cfg = await prisma.ticketConfig.create({
-          data: {
-            guildId: request.params.id,
-            categories: {
-              create: [
-                { guildId: request.params.id, label: 'Support', emoji: '🎫', description: 'Aide générale', order: 0 },
-                { guildId: request.params.id, label: 'Bug', emoji: '🐛', description: 'Signaler un problème', order: 1 },
-              ],
-            },
-          },
+          data: { guildId: request.params.id },
           include: { categories: { orderBy: { order: 'asc' } } },
         });
       }
@@ -617,7 +612,6 @@ app.patch<{ Params: { id: string }; Body: z.infer<typeof ticketConfigSchema> }>(
     try {
       const { categories, ...rest } = parsed.data;
 
-      // Mettre à jour la config principale
       let cfg = await prisma.ticketConfig.upsert({
         where: { guildId: request.params.id },
         create: { guildId: request.params.id, ...rest },
@@ -625,28 +619,17 @@ app.patch<{ Params: { id: string }; Body: z.infer<typeof ticketConfigSchema> }>(
         include: { categories: { orderBy: { order: 'asc' } } },
       });
 
-      // Gérer les catégories si fournies
       if (categories !== undefined) {
-        // Supprimer les catégories qui ne sont plus dans la liste
         const incomingIds = categories.filter(c => c.id).map(c => c.id as number);
         await prisma.ticketCategory.deleteMany({
           where: { configId: cfg.id, id: { notIn: incomingIds } },
         });
 
-        // Upsert chaque catégorie
         for (const cat of categories) {
           if (cat.id) {
             await prisma.ticketCategory.update({
               where: { id: cat.id },
-              data: {
-                label: cat.label,
-                emoji: cat.emoji,
-                description: cat.description,
-                categoryId: cat.categoryId,
-                welcomeMsg: cat.welcomeMsg,
-                askReason: cat.askReason,
-                order: cat.order,
-              },
+              data: { label: cat.label, emoji: cat.emoji, description: cat.description, order: cat.order },
             });
           } else {
             await prisma.ticketCategory.create({
@@ -656,9 +639,6 @@ app.patch<{ Params: { id: string }; Body: z.infer<typeof ticketConfigSchema> }>(
                 label: cat.label,
                 emoji: cat.emoji,
                 description: cat.description,
-                categoryId: cat.categoryId ?? null,
-                welcomeMsg: cat.welcomeMsg,
-                askReason: cat.askReason,
                 order: cat.order,
               },
             });
@@ -675,24 +655,6 @@ app.patch<{ Params: { id: string }; Body: z.infer<typeof ticketConfigSchema> }>(
       return cfg;
     } catch {
       return reply.status(500).send({ error: 'Erreur lors de la mise à jour de la config tickets.' });
-    }
-  },
-);
-// GET /api/guilds/:id/tickets/history
-app.get<{ Params: { id: string } }>(
-  '/:id/tickets/history',
-  { preHandler: requireGuildAdmin },
-  async (request, reply) => {
-    try {
-      const tickets = await prisma.ticket.findMany({
-        where: { guildId: request.params.id },
-        orderBy: { createdAt: 'desc' },
-        take: 100,
-        include: { category: true },
-      });
-      return tickets;
-    } catch {
-      return reply.status(500).send({ error: 'Erreur historique tickets.' });
     }
   },
 );
