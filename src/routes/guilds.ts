@@ -801,9 +801,9 @@ const logsSchema = z.object({
   logAutoMod:      z.boolean().optional(),
 });
 
-// GET /api/guilds/:id/logs
+// GET /api/guilds/:id/discord-logs
 app.get<{ Params: { id: string } }>(
-  '/:id/logs',
+  '/:id/discord-logs',
   { preHandler: requireGuildAdmin },
   async (request, reply) => {
     const { id } = request.params;
@@ -820,9 +820,9 @@ app.get<{ Params: { id: string } }>(
   },
 );
 
-// PATCH /api/guilds/:id/logs
+// PATCH /api/guilds/:id/discord-logs
 app.patch<{ Params: { id: string }; Body: z.infer<typeof logsSchema> }>(
-  '/:id/logs',
+  '/:id/discord-logs',
   { preHandler: requireGuildAdmin },
   async (request, reply) => {
     const { id } = request.params;
