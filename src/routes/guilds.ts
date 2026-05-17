@@ -679,6 +679,12 @@ app.patch<{ Params: { id: string }; Body: z.infer<typeof ticketConfigSchema> }>(
       }
 
       await publishEvent('tickets:update', { guildId: request.params.id });
+
+      // Si une catégorie Discord est fournie, demander au bot de créer le salon logs automatiquement
+      if (rest.discordCategoryId) {
+        await publishEvent('tickets:setup-logs-channel', { guildId: request.params.id, categoryId: rest.discordCategoryId });
+      }
+
       return cfg;
     } catch {
       return reply.status(500).send({ error: 'Erreur lors de la mise à jour de la config tickets.' });
