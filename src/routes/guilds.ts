@@ -592,20 +592,20 @@ app.get<{ Params: { id: string } }>(
       });
       if (!cfg) {
         cfg = await prisma.ticketConfig.create({
-          data: { guildId: request.params.id, panelTitle: '🎫 Tickets', panelDescription: 'Description' },
+          data: { guildId: request.params.id, panelTitle: '🎫 Tickets', panelDescription: 'Ecris ta Description' },
           include: { categories: { orderBy: { order: 'asc' } } },
         });
       }
       // Migrer les anciens textes par défaut
       const OLD_DESC = "Sélectionnez le type de votre demande dans le menu ci-dessous.";
       const OLD_TITLE = "🎫 Ouvrir un ticket";
-      const needsMigration = (!cfg.panelDescription || cfg.panelDescription.startsWith(OLD_DESC))
+      const needsMigration = (!cfg.panelDescription || cfg.panelDescription.startsWith(OLD_DESC) || cfg.panelDescription === 'Description')
         || cfg.panelTitle === OLD_TITLE;
       if (needsMigration) {
         cfg = await prisma.ticketConfig.update({
           where: { guildId: request.params.id },
           data: {
-            ...(!cfg.panelDescription || cfg.panelDescription.startsWith(OLD_DESC) ? { panelDescription: 'Description' } : {}),
+            ...((!cfg.panelDescription || cfg.panelDescription.startsWith(OLD_DESC) || cfg.panelDescription === 'Description' ? { panelDescription: 'Ecris ta Description' } : {})),
             ...(cfg.panelTitle === OLD_TITLE ? { panelTitle: '🎫 Tickets' } : {}),
           },
           include: { categories: { orderBy: { order: 'asc' } } },
