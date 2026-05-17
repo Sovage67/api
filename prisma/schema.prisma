@@ -337,6 +337,10 @@ model TicketConfig {
   pingRoleId              String?           // Rôle à mentionner à l'ouverture
   welcomeMessageEnabled   Boolean          @default(false)  // Envoyer un message de bienvenue
   welcomeMessage          String           @default("Bonjour {user.mention} ! Un modérateur va te répondre sous peu. Merci de patienter.")
+  // Message de fermeture
+  closeMessageEnabled     Boolean          @default(false)  // Envoyer un message à la fermeture
+  closeMessage            String           @default("Ton ticket a été fermé. Merci de nous avoir contacté !")
+  closeDmEnabled          Boolean          @default(false)  // Envoyer aussi en DM
   updatedAt        DateTime         @updatedAt
   categories       TicketCategory[]
 

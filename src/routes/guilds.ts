@@ -585,6 +585,10 @@ const ticketConfigSchema = z.object({
   pingRoleId:            z.string().regex(/^\d{17,20}$/).nullable().optional(),
   welcomeMessageEnabled: z.boolean().optional(),
   welcomeMessage:        z.string().max(2000).optional(),
+  // Message de fermeture
+  closeMessageEnabled:   z.boolean().optional(),
+  closeMessage:          z.string().max(2000).optional(),
+  closeDmEnabled:        z.boolean().optional(),
 });
 
 // GET /api/guilds/:id/tickets
