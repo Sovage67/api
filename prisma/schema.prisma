@@ -399,7 +399,7 @@ model BotPersonnaliseConfig {
   activityText  String?                         // Texte de l'activité
   streamUrl     String?                         // URL stream (si activityType = STREAMING)
   // Couleurs
-  profileColor  String   @default("#EB459E")    // Couleur aperçu profil
+  profileColor  String   @default("#5865F2")    // Couleur aperçu profil
   activityColor String   @default("#F0B232")    // Couleur icône activité
   updatedAt     DateTime @updatedAt
 
