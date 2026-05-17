@@ -578,6 +578,13 @@ const ticketConfigSchema = z.object({
   panelChannelId: z.string().nullable().optional(),
   panelMessageId: z.string().nullable().optional(),
   categories: z.array(ticketCategorySchema).optional(),
+  // Options avancées
+  discordCategoryId:     z.string().regex(/^\d{17,20}$/).nullable().optional(),
+  logChannelId:          z.string().regex(/^\d{17,20}$/).nullable().optional(),
+  voiceEnabled:          z.boolean().optional(),
+  pingRoleId:            z.string().regex(/^\d{17,20}$/).nullable().optional(),
+  welcomeMessageEnabled: z.boolean().optional(),
+  welcomeMessage:        z.string().max(2000).optional(),
 });
 
 // GET /api/guilds/:id/tickets
