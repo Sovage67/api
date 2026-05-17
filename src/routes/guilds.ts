@@ -708,4 +708,59 @@ app.post<{ Params: { id: string }; Body: { channelId: string } }>(
   },
 );
 
+// ─── BOT PERSONNALISÉ ────────────────────────────────────────────────────────
+
+const botPersonnaliseSchema = z.object({
+  enabled:       z.boolean().optional(),
+  nickname:      z.string().max(32).nullable().optional(),
+  avatarUrl:     z.string().url().nullable().optional(),
+  bio:           z.string().max(190).nullable().optional(),
+  status:        z.enum(['online', 'idle', 'dnd', 'invisible']).optional(),
+  activityType:  z.enum(['PLAYING', 'WATCHING', 'LISTENING', 'STREAMING', 'CUSTOM']).optional(),
+  activityText:  z.string().max(128).nullable().optional(),
+  streamUrl:     z.string().url().nullable().optional(),
+  profileColor:  z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  activityColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+});
+
+// GET /api/guilds/:id/bot-personnalise
+app.get<{ Params: { id: string } }>(
+  '/:id/bot-personnalise',
+  { preHandler: requireGuildAdmin },
+  async (request, reply) => {
+    const { id } = request.params;
+    try {
+      let cfg = await prisma.botPersonnaliseConfig.findUnique({ where: { guildId: id } });
+      if (!cfg) {
+        cfg = await prisma.botPersonnaliseConfig.create({ data: { guildId: id } });
+      }
+      return cfg;
+    } catch {
+      return reply.status(500).send({ error: 'Erreur lors de la récupération de la config.' });
+    }
+  },
+);
+
+// PATCH /api/guilds/:id/bot-personnalise
+app.patch<{ Params: { id: string }; Body: z.infer<typeof botPersonnaliseSchema> }>(
+  '/:id/bot-personnalise',
+  { preHandler: requireGuildAdmin },
+  async (request, reply) => {
+    const { id } = request.params;
+    const parse = botPersonnaliseSchema.safeParse(request.body);
+    if (!parse.success) return reply.status(400).send({ error: parse.error.flatten() });
+    try {
+      const cfg = await prisma.botPersonnaliseConfig.upsert({
+        where:  { guildId: id },
+        create: { guildId: id, ...parse.data },
+        update: parse.data,
+      });
+      await publishEvent('bot-personnalise:update', { guildId: id, ...parse.data });
+      return cfg;
+    } catch {
+      return reply.status(500).send({ error: 'Erreur lors de la mise à jour de la config.' });
+    }
+  },
+);
+
 }
