@@ -405,3 +405,61 @@ model BotPersonnaliseConfig {
 
   @@index([guildId])
 }
+
+model LogsConfig {
+  id              Int      @id @default(autoincrement())
+  guildId         String   @unique
+  enabled         Boolean  @default(false)
+  globalChannelId String?
+
+  // Membres
+  logArrivees     Boolean  @default(false)
+  logDeparts      Boolean  @default(false)
+  logPseudos      Boolean  @default(false)
+  logExclusions   Boolean  @default(false)
+
+  // Modération
+  logBans         Boolean  @default(false)
+  logMutes        Boolean  @default(false)
+  logWarns        Boolean  @default(false)
+  logAntiInsulte  Boolean  @default(false)
+  logAntiRaid     Boolean  @default(false)
+
+  // Messages
+  logMsgDelete    Boolean  @default(false)
+  logMsgEdit      Boolean  @default(false)
+  logMsgReport    Boolean  @default(false)
+  logMsgPin       Boolean  @default(false)
+
+  // Salons & Serveur
+  logSalons       Boolean  @default(false)
+  logThreads      Boolean  @default(false)
+  logServeur      Boolean  @default(false)
+  logWebhooks     Boolean  @default(false)
+  logIntegrations Boolean  @default(false)
+
+  // Roles
+  logRolesAttrib  Boolean  @default(false)
+  logRolesGestion Boolean  @default(false)
+
+  // Contenu
+  logEmojis       Boolean  @default(false)
+  logStickers     Boolean  @default(false)
+  logReactions    Boolean  @default(false)
+
+  // Vocal & Evenements
+  logVocal        Boolean  @default(false)
+  logStage        Boolean  @default(false)
+  logEvenements   Boolean  @default(false)
+
+  // Divers
+  logInvitations  Boolean  @default(false)
+  logTickets      Boolean  @default(false)
+  logXP           Boolean  @default(false)
+  logCommandes    Boolean  @default(false)
+  logAutoMod      Boolean  @default(false)
+
+  updatedAt       DateTime @updatedAt
+
+  @@index([guildId])
+}

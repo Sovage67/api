@@ -763,4 +763,84 @@ app.patch<{ Params: { id: string }; Body: z.infer<typeof botPersonnaliseSchema> 
   },
 );
 
+// ─── LOGS DISCORD ────────────────────────────────────────────────────────────
+
+const logsSchema = z.object({
+  enabled:         z.boolean().optional(),
+  globalChannelId: z.string().regex(/^\d{17,20}$/).nullable().optional(),
+  logArrivees:     z.boolean().optional(),
+  logDeparts:      z.boolean().optional(),
+  logPseudos:      z.boolean().optional(),
+  logExclusions:   z.boolean().optional(),
+  logBans:         z.boolean().optional(),
+  logMutes:        z.boolean().optional(),
+  logWarns:        z.boolean().optional(),
+  logAntiInsulte:  z.boolean().optional(),
+  logAntiRaid:     z.boolean().optional(),
+  logMsgDelete:    z.boolean().optional(),
+  logMsgEdit:      z.boolean().optional(),
+  logMsgReport:    z.boolean().optional(),
+  logMsgPin:       z.boolean().optional(),
+  logSalons:       z.boolean().optional(),
+  logThreads:      z.boolean().optional(),
+  logServeur:      z.boolean().optional(),
+  logWebhooks:     z.boolean().optional(),
+  logIntegrations: z.boolean().optional(),
+  logRolesAttrib:  z.boolean().optional(),
+  logRolesGestion: z.boolean().optional(),
+  logEmojis:       z.boolean().optional(),
+  logStickers:     z.boolean().optional(),
+  logReactions:    z.boolean().optional(),
+  logVocal:        z.boolean().optional(),
+  logStage:        z.boolean().optional(),
+  logEvenements:   z.boolean().optional(),
+  logInvitations:  z.boolean().optional(),
+  logTickets:      z.boolean().optional(),
+  logXP:           z.boolean().optional(),
+  logCommandes:    z.boolean().optional(),
+  logAutoMod:      z.boolean().optional(),
+});
+
+// GET /api/guilds/:id/logs
+app.get<{ Params: { id: string } }>(
+  '/:id/logs',
+  { preHandler: requireGuildAdmin },
+  async (request, reply) => {
+    const { id } = request.params;
+    try {
+      const cfg = await prisma.logsConfig.upsert({
+        where:  { guildId: id },
+        create: { guildId: id },
+        update: {},
+      });
+      return cfg;
+    } catch {
+      return reply.status(500).send({ error: 'Erreur lors de la récupération de la config logs.' });
+    }
+  },
+);
+
+// PATCH /api/guilds/:id/logs
+app.patch<{ Params: { id: string }; Body: z.infer<typeof logsSchema> }>(
+  '/:id/logs',
+  { preHandler: requireGuildAdmin },
+  async (request, reply) => {
+    const { id } = request.params;
+    const parse = logsSchema.safeParse(request.body);
+    if (!parse.success) return reply.status(400).send({ error: parse.error.flatten() });
+    try {
+      const cfg = await prisma.logsConfig.upsert({
+        where:  { guildId: id },
+        create: { guildId: id, ...parse.data },
+        update: parse.data,
+      });
+      await publishEvent('logs:update', { guildId: id });
+      return cfg;
+    } catch {
+      return reply.status(500).send({ error: 'Erreur lors de la mise à jour de la config logs.' });
+    }
+  },
+);
+
+
 }
