@@ -592,16 +592,22 @@ app.get<{ Params: { id: string } }>(
       });
       if (!cfg) {
         cfg = await prisma.ticketConfig.create({
-          data: { guildId: request.params.id, panelDescription: 'Description' },
+          data: { guildId: request.params.id, panelTitle: '🎫 Tickets', panelDescription: 'Description' },
           include: { categories: { orderBy: { order: 'asc' } } },
         });
       }
-      // Migrer l'ancien texte par défaut vers "Description"
+      // Migrer les anciens textes par défaut
       const OLD_DESC = "Sélectionnez le type de votre demande dans le menu ci-dessous.";
-      if (!cfg.panelDescription || cfg.panelDescription.startsWith(OLD_DESC)) {
+      const OLD_TITLE = "🎫 Ouvrir un ticket";
+      const needsMigration = (!cfg.panelDescription || cfg.panelDescription.startsWith(OLD_DESC))
+        || cfg.panelTitle === OLD_TITLE;
+      if (needsMigration) {
         cfg = await prisma.ticketConfig.update({
           where: { guildId: request.params.id },
-          data: { panelDescription: 'Description' },
+          data: {
+            ...(!cfg.panelDescription || cfg.panelDescription.startsWith(OLD_DESC) ? { panelDescription: 'Description' } : {}),
+            ...(cfg.panelTitle === OLD_TITLE ? { panelTitle: '🎫 Tickets' } : {}),
+          },
           include: { categories: { orderBy: { order: 'asc' } } },
         });
       }
